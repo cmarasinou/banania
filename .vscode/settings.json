@@ -1,0 +1,22 @@
+{
+    "editor.formatOnSave": true,
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": [
+        "--max-line-length=120",
+        "--ignore=E402"
+    ],
+    "python.formatting.blackArgs": [
+        "--line-length",
+        "120"
+    ],
+    "python.formatting.provider": "black",
+    "cSpell.words": [
+        "tolist"
+    ],
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportMissingImports": "none"
+    },
+    "jest.jestCommandLine": "jest --silent=false --verbose=true",
+    "jest.rootPath": "libs/payments/integrations/stripe/server/src/lib/test/"
+}
