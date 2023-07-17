@@ -2,6 +2,29 @@ from PIL import Image, ImageDraw, ImageFont
 import requests
 from io import BytesIO
 import textwrap
+import unicodedata
+import re
+import os
+
+WATERMARK_FONT = "font/GoudyOldStyleBold.ttf"
+TEXT_FONT = "font/Comfortaa-Regular.ttf"
+
+
+def slugify(value, allow_unicode=False):
+    """
+    Taken from https://github.com/django/django/blob/master/django/utils/text.py
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+    dashes to single dashes. Remove characters that aren't alphanumerics,
+    underscores, or hyphens. Convert to lowercase. Also strip leading and
+    trailing whitespace, dashes, and underscores.
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize("NFKC", value)
+    else:
+        value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    value = re.sub(r"[^\w\s-]", "", value.lower())
+    return re.sub(r"[-\s]+", "-", value).strip("-_")
 
 
 def create_image_with_text_and_image(string1, string2, image_url):
@@ -17,7 +40,7 @@ def create_image_with_text_and_image(string1, string2, image_url):
 
     # Load the image from the URL
     response = requests.get(image_url)
-    img = Image.open(BytesIO(response.content))
+    img = Image.open(BytesIO(response.content)).convert("RGBA")
 
     # Resize the image to fit the bottom of the created image
     img_h = height // 3
@@ -53,7 +76,7 @@ def create_image_with_text_and_image(string1, string2, image_url):
     draw = ImageDraw.Draw(image)
 
     # Define font and size for the strings
-    font = ImageFont.truetype("Comfortaa-Regular.ttf", height // 13, encoding="UTF-8")
+    font = ImageFont.truetype("font/Comfortaa-Regular.ttf", height // 13, encoding="UTF-8")
 
     # Calculate the center position for the first string
     text1_width, text1_height = draw.textsize(string1, font=font)
@@ -90,7 +113,7 @@ def create_image_with_text_and_image(string1, string2, image_url):
     image.paste(img, (img_x, img_y), img)
 
     # Draw banania text
-    font = ImageFont.truetype("GoudyOldStyleBold.ttf", height // 16)
+    font = ImageFont.truetype("font/GoudyOldStyleBold.ttf", height // 16)
     text3_width, text3_height = draw.textsize(string3, font=font)
     text3_x = (width - text3_width) // 2
     text3_y = height - text3_height - height // 25
@@ -100,7 +123,7 @@ def create_image_with_text_and_image(string1, string2, image_url):
     image = Image.alpha_composite(image, text)
 
     # Draw banania logo
-    img = Image.open("banania-logo.png")
+    img = Image.open("static/banania-logo.png")
     img2 = img.copy()
     img.putalpha(20)
     img_x = (width - img.width) // 2
@@ -110,7 +133,7 @@ def create_image_with_text_and_image(string1, string2, image_url):
     logo.paste(img, (img_x, img_y), mask=img2)
     image = Image.alpha_composite(image, logo)
     # Show the final image
-    image.show()
+    return image
 
 
 def get_average_brightness(image):
@@ -121,3 +144,17 @@ def get_average_brightness(image):
     brightness = sum(grayscale_image.getdata()) / float(image.size[0] * image.size[1])
 
     return brightness
+
+
+if __name__ == "__main__":
+    import pandas as pd
+
+    data = pd.read_csv("./data/raw.csv")
+    for idx in range(len(data.index)):
+        record = data.iloc[idx]
+        string1 = str(record["english"])
+        string2 = str(record["greek"])
+        image_url = str(record["url"])
+        image_path = os.path.join("./data/generated_images", f"{slugify(string1)}.png")
+        image = create_image_with_text_and_image(string1, string2, image_url)
+        image.save(image_path)
